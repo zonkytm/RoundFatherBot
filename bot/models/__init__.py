@@ -4,6 +4,7 @@ from .mailing import Mailing
 from .mailing_log import MailingLog
 from .premium import Payment, PremiumPackage
 from .preset import MailingPreset
+from .setting import BotSetting
 from .stats import StatsHourly
 from .task import ProcessingTask
 from .user import User
@@ -21,4 +22,5 @@ __all__ = [
     "StatsHourly",
     "PremiumPackage",
     "Payment",
+    "BotSetting",
 ]

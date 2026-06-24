@@ -16,6 +16,7 @@ from bot.models.base import async_session
 from web.routes import mailings, revenue, stats
 from web.routes.auth import get_current_user
 from web.routes.auth import router as auth_router
+from web.routes.settings import router as settings_router
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 app.include_router(mailings.router, prefix="/api")
 app.include_router(revenue.router, prefix="/api")
+app.include_router(settings_router, prefix="/api")
 
 
 @app.get("/health")
@@ -96,3 +98,10 @@ async def revenue_page(request: Request, user: dict = Depends(get_current_user))
     if not user or user.get("role") != "admin":
         return RedirectResponse(url="/login")
     return templates.TemplateResponse(request, "revenue.html", {})
+
+
+@app.get("/settings")
+async def settings_page(request: Request, user: dict = Depends(get_current_user)):
+    if not user or user.get("role") != "admin":
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse(request, "settings.html", {})

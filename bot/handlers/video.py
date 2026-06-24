@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from bot.config import settings
 from bot.metrics import VIDEO_PROCESSING_COUNT, VIDEO_PROCESSING_LATENCY
 from bot.models.base import async_session
+from bot.models.setting import BotSetting
 from bot.models.task import ProcessingTask, TaskStatus
 from bot.models.user import User
 from bot.services.video_processor import cleanup_files, convert_to_video_note
@@ -41,6 +42,13 @@ async def handle_video(message: Message) -> None:
             await session.commit()
 
         if not user.is_premium:
+            limit_setting = (
+                await session.execute(
+                    select(BotSetting).where(BotSetting.key == "daily_limit")
+                )
+            ).scalar_one_or_none()
+            daily_limit = int(limit_setting.value) if limit_setting else user.daily_limit
+
             day_ago = datetime.utcnow() - timedelta(hours=24)
             today_count = (
                 await session.execute(
@@ -52,11 +60,11 @@ async def handle_video(message: Message) -> None:
                 )
             ).scalar() or 0
 
-            if today_count >= user.daily_limit:
+            if today_count >= daily_limit:
                 await status_msg.edit_text(
                     "\u26a0\ufe0f <b>Daily limit reached!</b>\n\n"
                     f"You processed <b>{today_count}</b> videos today.\n"
-                    f"Limit: <b>{user.daily_limit}/day</b>\n\n"
+                    f"Limit: <b>{daily_limit}/day</b>\n\n"
                     "Get <b>premium</b> for unlimited processing: /premium"
                 )
                 return

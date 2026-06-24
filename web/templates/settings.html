@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <nav class="bg-gray-800 px-6 py-3 flex gap-6">
+        <a href="/" class="text-gray-400 hover:text-white">Dashboard</a>
+        <a href="/mailings" class="text-gray-400 hover:text-white">Mailings</a>
+        <a href="/revenue" class="text-gray-400 hover:text-white">Revenue</a>
+        <a href="/settings" class="text-white font-bold">Settings</a>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Bot Settings</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-xl font-bold mb-4 text-blue-400">Limits</h2>
+                <div id="settings-limits" class="space-y-4"></div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-xl font-bold mb-4 text-yellow-400">Premium Prices</h2>
+                <div id="settings-prices" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg hidden transition-opacity">
+            Saved!
+        </div>
+    </div>
+
+    <script>
+        const CATEGORIES = {
+            limits: ['daily_limit', 'rate_limit_per_minute'],
+            prices: [
+                'premium_price_1mo_stars', 'premium_price_1mo_rub',
+                'premium_price_3mo_stars', 'premium_price_3mo_rub',
+                'premium_price_6mo_stars', 'premium_price_6mo_rub',
+            ]
+        };
+
+        const LABELS = {
+            daily_limit: 'Daily Video Limit (free users)',
+            rate_limit_per_minute: 'Rate Limit (per minute)',
+            premium_price_1mo_stars: '1 Month — Stars',
+            premium_price_1mo_rub: '1 Month — RUB',
+            premium_price_3mo_stars: '3 Months — Stars',
+            premium_price_3mo_rub: '3 Months — RUB',
+            premium_price_6mo_stars: '6 Months — Stars',
+            premium_price_6mo_rub: '6 Months — RUB',
+        };
+
+        function showToast() {
+            const t = document.getElementById('toast');
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2000);
+        }
+
+        function renderGroup(containerId, keys, settings) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            for (const key of keys) {
+                const s = settings.find(x => x.key === key);
+                if (!s) continue;
+
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-4';
+
+                row.innerHTML = `
+                    <label class="text-sm text-gray-300 w-64 shrink-0">${LABELS[key] || key}</label>
+                    <input type="text" value="${s.value}"
+                        class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                        data-key="${key}">
+                    <button onclick="saveSetting(this)"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shrink-0">
+                        Save
+                    </button>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        async function loadSettings() {
+            const res = await fetch('/api/settings');
+            const settings = await res.json();
+            renderGroup('settings-limits', CATEGORIES.limits, settings);
+            renderGroup('settings-prices', CATEGORIES.prices, settings);
+        }
+
+        async function saveSetting(btn) {
+            const input = btn.parentElement.querySelector('input');
+            const key = input.dataset.key;
+            const value = input.value.trim();
+
+            if (!/^\d+$/.test(value)) {
+                alert('Value must be a number');
+                return;
+            }
+
+            const res = await fetch(`/api/settings/${key}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value })
+            });
+
+            if (res.ok) {
+                showToast();
+            } else {
+                alert('Failed to save');
+            }
+        }
+
+        loadSettings();
+    </script>
+</body>
+</html>

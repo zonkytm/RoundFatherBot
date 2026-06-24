@@ -18,6 +18,7 @@ from bot.models.base import async_session, engine
 from bot.models.premium import PremiumPackage
 from bot.models.preset import MailingPreset
 from bot.services.notification_service import send_notifications
+from web.routes.settings import seed_settings
 
 SEED_PRESETS = [
     ("Каждый день в 10:00", "0 10 * * *", 1),
@@ -71,6 +72,7 @@ async def on_startup(bot: Bot) -> None:
     )
     await seed_presets()
     await seed_packages()
+    await seed_settings()
     asyncio.create_task(send_notifications(bot))
 
 
