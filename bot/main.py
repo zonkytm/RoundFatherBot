@@ -14,6 +14,7 @@ from bot.config import settings
 from bot.handlers import handlers_router
 from bot.middlewares.metrics import MetricsMiddleware
 from bot.middlewares.rate_limit import RateLimitMiddleware
+from bot.middlewares.user import UserMiddleware
 from bot.models.admin import Admin
 from bot.models.base import async_session, engine
 from bot.models.premium import PremiumPackage
@@ -142,8 +143,10 @@ async def main() -> None:
     )
 
     dp = Dispatcher()
+    dp.message.middleware(UserMiddleware())
     dp.message.middleware(MetricsMiddleware())
     dp.message.middleware(RateLimitMiddleware(limit=settings.RATE_LIMIT_PER_MINUTE))
+    dp.callback_query.middleware(UserMiddleware())
     dp.include_router(handlers_router)
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)

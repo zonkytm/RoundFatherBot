@@ -21,23 +21,14 @@ video_router = Router()
 
 
 @video_router.message(F.video | F.video_note)
-async def handle_video(message: Message) -> None:
+async def handle_video(message: Message, db_user: User) -> None:
     status_msg = await message.answer("Downloading video...")
     start = time.monotonic()
 
     async with async_session() as session:
-        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
-        user = result.scalar_one_or_none()
-        if not user:
-            user = User(
-                telegram_id=message.from_user.id,
-                username=message.from_user.username,
-                first_name=message.from_user.full_name,
-            )
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-        elif user.is_blocked:
+        user = await session.get(User, db_user.id)
+
+        if user.is_blocked:
             user.is_blocked = False
             await session.commit()
 
