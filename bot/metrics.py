@@ -33,8 +33,3 @@ PREMIUM_PAYMENTS = Counter(
     "Total premium payments",
     ["package", "status"],
 )
-
-ACTIVE_USERS = Counter(
-    "bot_active_users_total",
-    "Total unique active users",
-)

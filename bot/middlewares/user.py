@@ -3,7 +3,8 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Update, User as TgUser
+from aiogram.types import TelegramObject, Update
+from aiogram.types import User as TgUser
 from sqlalchemy import select
 
 from bot.models.base import async_session
@@ -32,9 +33,7 @@ class UserMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         async with async_session() as session:
-            result = await session.execute(
-                select(User).where(User.telegram_id == tg_user.id)
-            )
+            result = await session.execute(select(User).where(User.telegram_id == tg_user.id))
             user = result.scalar_one_or_none()
 
             if not user:
@@ -46,7 +45,7 @@ class UserMiddleware(BaseMiddleware):
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
-                logger.info("Created new user: %s (id=%s)", tg_user.full_name, tg_user.id)
+                logger.debug("Created new user: %s (id=%s)", tg_user.full_name, tg_user.id)
 
             data["db_user"] = user
 

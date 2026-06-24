@@ -34,9 +34,7 @@ async def handle_video(message: Message, db_user: User) -> None:
 
         if not user.is_premium:
             limit_setting = (
-                await session.execute(
-                    select(BotSetting).where(BotSetting.key == "daily_limit")
-                )
+                await session.execute(select(BotSetting).where(BotSetting.key == "daily_limit"))
             ).scalar_one_or_none()
             daily_limit = int(limit_setting.value) if limit_setting else 10
 

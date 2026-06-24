@@ -37,5 +37,8 @@ class Settings(BaseSettings):
     LOG_MAX_BYTES: int = 10 * 1024 * 1024  # 10MB
     LOG_BACKUP_COUNT: int = 5
 
+    OPENSEARCH_URL: str = "http://opensearch:9200"
+    OPENSEARCH_ENABLED: bool = True
+
 
 settings = Settings()

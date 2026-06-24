@@ -1,3 +1,4 @@
+import logging
 import time
 from collections import defaultdict
 
@@ -7,6 +8,8 @@ from sqlalchemy import select
 
 from bot.models.base import async_session
 from bot.models.setting import BotSetting
+
+logger = logging.getLogger(__name__)
 
 
 class RateLimitMiddleware(BaseMiddleware):
@@ -39,6 +42,7 @@ class RateLimitMiddleware(BaseMiddleware):
 
         if len(self._timestamps[user_id]) >= limit:
             wait_time = int(self.window - (now - self._timestamps[user_id][0]))
+            logger.warning("Rate limit exceeded: user=%d, wait=%ds", user_id, wait_time)
             await event.answer(
                 f"Too many videos. Wait {wait_time}s.",
             )

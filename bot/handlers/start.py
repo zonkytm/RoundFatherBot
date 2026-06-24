@@ -13,9 +13,7 @@ start_router = Router()
 @start_router.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.telegram_id == message.from_user.id)
-        )
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
         user = result.scalar_one_or_none()
         if user and user.is_blocked:
             user.is_blocked = False

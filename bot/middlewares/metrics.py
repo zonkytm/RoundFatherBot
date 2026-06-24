@@ -1,6 +1,7 @@
 import functools
 import time
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import Message
@@ -17,7 +18,15 @@ class MetricsMiddleware(BaseMiddleware):
     ) -> Any:
         fn = handler.func if isinstance(handler, functools.partial) else handler
         handler_name = getattr(fn, "__qualname__", getattr(fn, "__name__", "unknown"))
-        msg_type = "text" if event.text else "photo" if event.photo else "video" if event.video else "other"
+        msg_type = (
+            "text"
+            if event.text
+            else "photo"
+            if event.photo
+            else "video"
+            if event.video
+            else "other"
+        )
 
         REQUEST_COUNT.labels(handler=handler_name, message_type=msg_type).inc()
 

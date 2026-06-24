@@ -12,6 +12,8 @@ from sqlalchemy import select
 
 from bot.config import settings
 from bot.handlers import handlers_router
+from bot.logging_opensearch import OpenSearchHandler
+from bot.metrics_server import start_metrics_server, stop_metrics_server
 from bot.middlewares.metrics import MetricsMiddleware
 from bot.middlewares.rate_limit import RateLimitMiddleware
 from bot.middlewares.user import UserMiddleware
@@ -48,9 +50,7 @@ async def sync_admins():
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
-            existing = await session.execute(
-                select(Admin).where(Admin.user_id == user.id)
-            )
+            existing = await session.execute(select(Admin).where(Admin.user_id == user.id))
             if not existing.scalar_one_or_none():
                 session.add(Admin(user_id=user.id))
                 await session.commit()
@@ -95,10 +95,12 @@ async def on_startup(bot: Bot) -> None:
     await seed_packages()
     await seed_settings()
     await sync_admins()
+    await start_metrics_server()
     asyncio.create_task(send_notifications(bot))
 
 
 async def on_shutdown() -> None:
+    await stop_metrics_server()
     await engine.dispose()
 
 
@@ -124,10 +126,19 @@ def setup_logging() -> None:
     root_logger.addHandler(file_handler)
 
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(
-        logging.Formatter("%(levelname)-8s | %(name)s | %(message)s")
-    )
+    console_handler.setFormatter(logging.Formatter("%(levelname)-8s | %(name)s | %(message)s"))
     root_logger.addHandler(console_handler)
+
+    if settings.OPENSEARCH_ENABLED:
+        try:
+            os_handler = OpenSearchHandler(
+                opensearch_url=settings.OPENSEARCH_URL,
+                index_prefix="bot-logs",
+            )
+            os_handler.setLevel(getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO))
+            root_logger.addHandler(os_handler)
+        except Exception:
+            logging.warning("Failed to initialize OpenSearch handler")
 
 
 async def main() -> None:
@@ -147,6 +158,7 @@ async def main() -> None:
     dp.message.middleware(MetricsMiddleware())
     dp.message.middleware(RateLimitMiddleware(limit=settings.RATE_LIMIT_PER_MINUTE))
     dp.callback_query.middleware(UserMiddleware())
+    dp.callback_query.middleware(MetricsMiddleware())
     dp.include_router(handlers_router)
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)

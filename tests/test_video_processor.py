@@ -42,11 +42,14 @@ async def test_run_ffmpeg_timeout():
 async def test_convert_to_video_note_ffmpeg_error(tmp_video, tmp_path):
     output = str(tmp_path / "output.mp4")
 
-    with patch(
-        "bot.services.video_processor.run_ffmpeg",
-        new_callable=AsyncMock,
-        return_value=(1, "", "error message"),
-    ), pytest.raises(RuntimeError, match="exited with code 1"):
+    with (
+        patch(
+            "bot.services.video_processor.run_ffmpeg",
+            new_callable=AsyncMock,
+            return_value=(1, "", "error message"),
+        ),
+        pytest.raises(RuntimeError, match="exited with code 1"),
+    ):
         await convert_to_video_note(tmp_video, output_path=output)
 
 
@@ -54,14 +57,17 @@ async def test_convert_to_video_note_ffmpeg_error(tmp_video, tmp_path):
 async def test_convert_to_video_note_success(tmp_video, tmp_path):
     output = str(tmp_path / "output.mp4")
 
-    with patch(
-        "bot.services.video_processor.run_ffmpeg",
-        new_callable=AsyncMock,
-        return_value=(0, "", ""),
-    ), patch.object(
-        __import__("bot.config", fromlist=["settings"]).settings,
-        "TEMP_DIR",
-        str(tmp_path),
+    with (
+        patch(
+            "bot.services.video_processor.run_ffmpeg",
+            new_callable=AsyncMock,
+            return_value=(0, "", ""),
+        ),
+        patch.object(
+            __import__("bot.config", fromlist=["settings"]).settings,
+            "TEMP_DIR",
+            str(tmp_path),
+        ),
     ):
         result = await convert_to_video_note(tmp_video, output_path=output)
         assert result == output
@@ -86,14 +92,17 @@ async def test_cleanup_files_missing():
 
 @pytest.mark.asyncio
 async def test_convert_auto_generates_output_path(tmp_video, tmp_path):
-    with patch(
-        "bot.services.video_processor.run_ffmpeg",
-        new_callable=AsyncMock,
-        return_value=(0, "", ""),
-    ), patch.object(
-        __import__("bot.config", fromlist=["settings"]).settings,
-        "TEMP_DIR",
-        str(tmp_path),
+    with (
+        patch(
+            "bot.services.video_processor.run_ffmpeg",
+            new_callable=AsyncMock,
+            return_value=(0, "", ""),
+        ),
+        patch.object(
+            __import__("bot.config", fromlist=["settings"]).settings,
+            "TEMP_DIR",
+            str(tmp_path),
+        ),
     ):
         result = await convert_to_video_note(tmp_video)
         assert result.endswith(".mp4")

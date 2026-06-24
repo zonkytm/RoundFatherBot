@@ -57,7 +57,7 @@ docker compose ps
 docker compose logs bot
 ```
 
-Services: `bot`, `worker`, `web` (port 8000), `redis`, `postgres`
+Services: `bot`, `worker`, `web` (port 8000), `redis`, `postgres`, `prometheus` (port 9091), `opensearch` (port 9200), `opensearch-dashboards` (port 5601)
 
 ### Local Development
 
@@ -115,6 +115,8 @@ Access at `http://localhost:8000` (login with `DASHBOARD_TOKEN`).
 | `RATE_LIMIT_PER_MINUTE` | Max videos per user per minute | `5` |
 | `PAYMENTS_TEST_MODE` | Use Telegram test server for Stars | `false` |
 | `TEST_BOT_TOKEN` | Bot token from test server @BotFather | -- |
+| `OPENSEARCH_URL` | OpenSearch connection URL | `http://opensearch:9200` |
+| `OPENSEARCH_ENABLED` | Enable OpenSearch logging | `true` |
 
 ## Testing Payments
 
@@ -151,13 +153,69 @@ docker compose up -d --build bot
 **Note:** Test Stars are free and the payment flow is identical to production.
 | `RATE_LIMIT_PER_MINUTE` | Max videos per user per minute | `5` |
 
+## Monitoring (Prometheus)
+
+Bot exposes metrics on port `9090`, web on port `8000`. Prometheus scrapes both every 15s.
+
+**Prometheus UI:** `http://localhost:9091`
+
+### Available Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `bot_requests_total` | Counter | Total requests (labels: `handler`, `message_type`) |
+| `bot_request_latency_seconds` | Histogram | Request latency |
+| `bot_video_processing_total` | Counter | Video processing attempts (label: `status`) |
+| `bot_video_processing_latency_seconds` | Histogram | FFmpeg processing time |
+| `bot_premium_payments_total` | Counter | Premium payments (labels: `package`, `status`) |
+| `bot_info` | Info | Bot version and name |
+
+### Example PromQL Queries
+
+```promql
+# Requests per second
+rate(bot_requests_total[5m])
+
+# Video processing failure rate
+rate(bot_video_processing_total{status="error"}[5m]) / rate(bot_video_processing_total[5m])
+
+# p95 video processing latency
+histogram_quantile(0.95, rate(bot_video_processing_latency_seconds_bucket[5m]))
+
+# Premium payments by package
+sum by (package) (bot_premium_payments_total{status="completed"})
+```
+
+## Logging (OpenSearch)
+
+Bot logs are shipped to OpenSearch in real-time. Logs are indexed by month (`bot-logs-YYYY.MM`).
+
+**View logs in OpenSearch Dashboards:** `http://localhost:5601`
+
+### Log Levels
+
+| Level | Usage |
+|-------|-------|
+| `ERROR` | FFmpeg failures, DB errors, task crashes |
+| `WARNING` | Rate limiting, broadcast failures, health check issues |
+| `INFO` | Server start/stop, payments, mailing completions |
+| `DEBUG` | User creation, routine operations |
+
+### OpenSearch Dashboards Features
+
+- **Discover** -- search and filter logs in real-time
+- **Field filters** -- filter by `level`, `logger`, `module`
+- **Time range** -- select custom time ranges
+- **Full-text search** -- search in `message` field
+- **Saved searches** -- save frequently used queries
+
 ## Tech Stack
 
 - **Bot** -- Python 3.11, aiogram 3.x, SQLAlchemy 2.0 (async), arq + Redis
 - **Dashboard** -- FastAPI, Jinja2, Chart.js, Tailwind CSS
 - **Database** -- PostgreSQL 16, Alembic
 - **Video** -- FFmpeg (async subprocess)
-- **Infrastructure** -- Docker Compose, Prometheus
+- **Infrastructure** -- Docker Compose, Prometheus, OpenSearch
 
 ## License
 

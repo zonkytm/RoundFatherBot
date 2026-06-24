@@ -1,3 +1,5 @@
+import logging
+
 from aiogram import Bot, Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -7,6 +9,8 @@ from bot.config import settings
 from bot.models.base import async_session
 from bot.models.premium import Payment
 from bot.models.user import User
+
+logger = logging.getLogger(__name__)
 
 admin_router = Router()
 
@@ -53,9 +57,7 @@ async def cmd_unblock(message: Message) -> None:
         return
 
     async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.telegram_id == target_id)
-        )
+        result = await session.execute(select(User).where(User.telegram_id == target_id))
         user = result.scalar_one_or_none()
         if not user:
             await message.answer(f"User {target_id} not found.")
@@ -76,9 +78,7 @@ async def cmd_blocked(message: Message) -> None:
         return
 
     async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.is_blocked)
-        )
+        result = await session.execute(select(User).where(User.is_blocked))
         users = result.scalars().all()
 
     if not users:
@@ -110,7 +110,7 @@ async def cmd_refund(message: Message, bot: Bot) -> None:
         return
 
     try:
-        target_id = int(args[1])
+        int(args[1])
     except ValueError:
         await message.answer("Invalid user ID.")
         return
@@ -130,9 +130,7 @@ async def cmd_refund(message: Message, bot: Bot) -> None:
             await message.answer("This payment was already refunded.")
             return
 
-        user_result = await session.execute(
-            select(User).where(User.id == payment.user_id)
-        )
+        user_result = await session.execute(select(User).where(User.id == payment.user_id))
         user = user_result.scalar_one_or_none()
         if not user:
             await message.answer("User not found.")
@@ -152,4 +150,7 @@ async def cmd_refund(message: Message, bot: Bot) -> None:
                 f"Payment ID: {payment_charge_id}"
             )
         except Exception as e:
+            logger.exception(
+                "Refund failed: user=%d, payment=%s", user.telegram_id, payment_charge_id
+            )
             await message.answer(f"Refund failed: {e}")

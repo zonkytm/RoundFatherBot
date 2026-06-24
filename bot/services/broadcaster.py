@@ -27,12 +27,16 @@ async def broadcast(bot: Bot, mailing: Mailing) -> int:
         users = result.scalars().all()
 
     sent = 0
+    failed = 0
     for user in users:
         try:
             await bot.send_message(chat_id=user.telegram_id, text=mailing.text)
             sent += 1
-        except Exception as e:
-            logger.warning("Failed to send to %d: %s", user.telegram_id, e)
+        except Exception:
+            failed += 1
+
+    if failed:
+        logger.warning("Broadcast mailing=%d: sent=%d, failed=%d", mailing.id, sent, failed)
 
     async with async_session() as session:
         m = await session.get(Mailing, mailing.id)

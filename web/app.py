@@ -1,14 +1,12 @@
-import asyncio
 import logging
 from pathlib import Path
 
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, FileResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from prometheus_client import generate_latest
 from sqlalchemy import text
 
 from bot.config import settings
@@ -73,12 +71,10 @@ async def ready():
         logger.warning("Redis health check failed: %s", e)
 
     status_code = 200 if all(checks.values()) else 503
-    return JSONResponse(content={"status": "ready" if all(checks.values()) else "degraded", "checks": checks}, status_code=status_code)
-
-
-@app.get("/metrics")
-async def metrics():
-    return PlainTextResponse(generate_latest(), media_type="text/plain")
+    return JSONResponse(
+        content={"status": "ready" if all(checks.values()) else "degraded", "checks": checks},
+        status_code=status_code,
+    )
 
 
 @app.get("/login")
@@ -137,9 +133,9 @@ async def spa_fallback(request: Request, full_path: str):
     # Skip API routes and static files
     if full_path.startswith("api/") or full_path.startswith("static/"):
         return JSONResponse(content={"detail": "Not found"}, status_code=404)
-    
+
     index_file = DIST_DIR / "index.html"
     if index_file.exists():
         return FileResponse(str(index_file))
-    
+
     return RedirectResponse(url="/login")

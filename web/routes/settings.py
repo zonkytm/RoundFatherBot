@@ -52,7 +52,13 @@ async def list_settings(user: dict = Depends(require_admin)):
     async with async_session() as session:
         settings_result = await session.execute(select(BotSetting).order_by(BotSetting.key))
         settings = [
-            {"id": s.id, "key": s.key, "value": s.value, "description": s.description, "type": "setting"}
+            {
+                "id": s.id,
+                "key": s.key,
+                "value": s.value,
+                "description": s.description,
+                "type": "setting",
+            }
             for s in settings_result.scalars().all()
         ]
 
@@ -87,9 +93,7 @@ async def update_setting(key: str, body: SettingUpdate, user: dict = Depends(req
 
 
 @router.put("/package/{package_id}")
-async def update_package(
-    package_id: int, body: PackageUpdate, user: dict = Depends(require_admin)
-):
+async def update_package(package_id: int, body: PackageUpdate, user: dict = Depends(require_admin)):
     async with async_session() as session:
         pkg = await session.get(PremiumPackage, package_id)
         if not pkg:
@@ -97,4 +101,9 @@ async def update_package(
         pkg.price_stars = body.price_stars
         pkg.price_rub = body.price_rub
         await session.commit()
-    return {"ok": True, "id": package_id, "price_stars": body.price_stars, "price_rub": body.price_rub}
+    return {
+        "ok": True,
+        "id": package_id,
+        "price_stars": body.price_stars,
+        "price_rub": body.price_rub,
+    }

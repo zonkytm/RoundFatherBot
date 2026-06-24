@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from aiogram import F, Router
@@ -12,9 +13,12 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import select
 
+from bot.metrics import PREMIUM_PAYMENTS
 from bot.models.base import async_session
 from bot.models.premium import Payment, PremiumPackage
 from bot.models.user import User
+
+logger = logging.getLogger(__name__)
 
 premium_router = Router()
 
@@ -128,6 +132,14 @@ async def on_successful_payment(message: Message) -> None:
         )
         session.add(payment_record)
         await session.commit()
+
+    PREMIUM_PAYMENTS.labels(package=pkg.name, status="completed").inc()
+    logger.info(
+        "Payment received: user=%d, package=%s, amount=%d",
+        user_tg_id,
+        pkg.name,
+        payment.total_amount,
+    )
 
     await message.answer(
         f"<b>Premium activated!</b>\n\n"

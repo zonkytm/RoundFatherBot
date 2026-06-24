@@ -17,9 +17,7 @@ status_router = Router()
 
 async def _get_status_text(user_id: int) -> tuple[str, bool]:
     async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.telegram_id == user_id)
-        )
+        result = await session.execute(select(User).where(User.telegram_id == user_id))
         user = result.scalar_one_or_none()
 
         if not user:
@@ -35,16 +33,11 @@ async def _get_status_text(user_id: int) -> tuple[str, bool]:
                     f"Limit: \u221e (unlimited)"
                 )
             else:
-                text = (
-                    "\u274c <b>Premium Expired</b>\n"
-                    "Your premium subscription has expired."
-                )
+                text = "\u274c <b>Premium Expired</b>\nYour premium subscription has expired."
             return text, True
         else:
             limit_setting = (
-                await session.execute(
-                    select(BotSetting).where(BotSetting.key == "daily_limit")
-                )
+                await session.execute(select(BotSetting).where(BotSetting.key == "daily_limit"))
             ).scalar_one_or_none()
             daily_limit = int(limit_setting.value) if limit_setting else 10
 
@@ -142,9 +135,7 @@ async def callback_show_premium(callback: CallbackQuery) -> None:
                 callback_data="premium_yookassa",
             )
         )
-    builder.row(
-        InlineKeyboardButton(text="\u2190 Back", callback_data="my_status")
-    )
+    builder.row(InlineKeyboardButton(text="\u2190 Back", callback_data="my_status"))
 
     await callback.message.edit_text(
         "<b>Premium Subscription</b>\n\n"
