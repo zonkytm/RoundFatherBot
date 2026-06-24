@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 
 from bot.models.base import async_session
 from bot.models.premium import PremiumPackage
+from bot.models.setting import BotSetting
 from bot.models.task import ProcessingTask, TaskStatus
 from bot.models.user import User
 
@@ -40,6 +41,13 @@ async def _get_status_text(user_id: int) -> tuple[str, bool]:
                 )
             return text, True
         else:
+            limit_setting = (
+                await session.execute(
+                    select(BotSetting).where(BotSetting.key == "daily_limit")
+                )
+            ).scalar_one_or_none()
+            daily_limit = int(limit_setting.value) if limit_setting else user.daily_limit
+
             day_ago = datetime.utcnow() - timedelta(hours=24)
             today_count = (
                 await session.execute(
@@ -51,10 +59,10 @@ async def _get_status_text(user_id: int) -> tuple[str, bool]:
                 )
             ).scalar() or 0
 
-            remaining = max(0, user.daily_limit - today_count)
+            remaining = max(0, daily_limit - today_count)
             text = (
                 f"\U0001f4ca <b>Your Stats</b>\n\n"
-                f"Videos today: <b>{today_count}/{user.daily_limit}</b>\n"
+                f"Videos today: <b>{today_count}/{daily_limit}</b>\n"
                 f"Remaining: <b>{remaining}</b>"
             )
             return text, False
