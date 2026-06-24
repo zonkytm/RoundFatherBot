@@ -14,9 +14,11 @@ from bot.config import settings
 from bot.handlers import handlers_router
 from bot.middlewares.metrics import MetricsMiddleware
 from bot.middlewares.rate_limit import RateLimitMiddleware
+from bot.models.admin import Admin
 from bot.models.base import async_session, engine
 from bot.models.premium import PremiumPackage
 from bot.models.preset import MailingPreset
+from bot.models.user import User
 from bot.services.notification_service import send_notifications
 from web.routes.settings import seed_settings
 
@@ -33,6 +35,24 @@ SEED_PACKAGES = [
     ("3 месяца", 90, 250, 499, 2),
     ("6 месяцев", 180, 450, 899, 3),
 ]
+
+
+async def sync_admins():
+    for admin_id in settings.ADMIN_IDS:
+        async with async_session() as session:
+            result = await session.execute(select(User).where(User.telegram_id == admin_id))
+            user = result.scalar_one_or_none()
+            if not user:
+                user = User(telegram_id=admin_id, first_name=f"Admin {admin_id}")
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
+            existing = await session.execute(
+                select(Admin).where(Admin.user_id == user.id)
+            )
+            if not existing.scalar_one_or_none():
+                session.add(Admin(user_id=user.id))
+                await session.commit()
 
 
 async def seed_presets():
@@ -73,6 +93,7 @@ async def on_startup(bot: Bot) -> None:
     await seed_presets()
     await seed_packages()
     await seed_settings()
+    await sync_admins()
     asyncio.create_task(send_notifications(bot))
 
 
