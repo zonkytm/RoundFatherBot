@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     BOT_USERNAME: str = ""
     REDIS_URL: str = "redis://localhost:6379"
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/bot_qwen"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/roundfather_bot"
 
     ADMIN_IDS: list[int] = []
 

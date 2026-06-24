@@ -107,10 +107,11 @@ Access at `http://localhost:8000` (login with `DASHBOARD_TOKEN`).
 | `BOT_TOKEN` | Telegram bot token | -- |
 | `BOT_USERNAME` | Bot username | -- |
 | `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
-| `DATABASE_URL` | PostgreSQL async URL | `postgresql+asyncpg://postgres:postgres@localhost:5432/bot_qwen` |
+| `DATABASE_URL` | PostgreSQL async URL | `postgresql+asyncpg://postgres:postgres@localhost:5432/roundfather_bot` |
 | `ADMIN_IDS` | JSON list of admin Telegram IDs | `[]` |
 | `WEBAPP_URL` | Dashboard public URL | `http://localhost:8000` |
 | `DASHBOARD_TOKEN` | Admin dashboard access token | -- |
+| `RATE_LIMIT_PER_MINUTE` | Max videos per user per minute | `5` |
 | `RATE_LIMIT_PER_MINUTE` | Max videos per user per minute | `5` |
 
 ## Tech Stack

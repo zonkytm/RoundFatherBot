@@ -38,7 +38,7 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: bot_qwen_test
+          POSTGRES_DB: roundfather_bot_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -51,7 +51,7 @@ jobs:
     env:
       BOT_TOKEN: "test:fake-token"
       REDIS_URL: "redis://localhost:6379"
-      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@localhost:5432/bot_qwen_test"
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@localhost:5432/roundfather_bot_test"
       ADMIN_IDS: "[123]"
       DASHBOARD_TOKEN: "test-token"
     steps:
