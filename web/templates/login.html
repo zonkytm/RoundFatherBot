@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Bot Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+    <div class="bg-gray-800 rounded-lg p-8 w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center">Bot Dashboard</h1>
+        <div id="error-msg" class="hidden bg-red-900 text-red-200 rounded p-3 mb-4 text-sm"></div>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label class="block text-gray-400 text-sm mb-1">Access Token</label>
+                <input type="password" id="token"
+                    class="w-full bg-gray-700 rounded px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter dashboard token" required />
+            </div>
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold">
+                Login
+            </button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = document.getElementById('token').value;
+            const errorEl = document.getElementById('error-msg');
+            try {
+                const res = await fetch('/api/auth/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token })
+                });
+                if (res.ok) {
+                    document.cookie = 'dashboard_token=' + token + '; path=/; max-age=86400; SameSite=Lax';
+                    window.location.href = '/';
+                } else {
+                    errorEl.textContent = 'Invalid token';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorEl.textContent = 'Connection error';
+                errorEl.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

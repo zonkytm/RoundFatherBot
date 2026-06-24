@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <nav class="bg-gray-800 px-6 py-3 flex gap-6">
+        <a href="/" class="text-white font-bold">Dashboard</a>
+        <a href="/mailings" class="text-gray-400 hover:text-white">Mailings</a>
+        <a href="/revenue" class="text-gray-400 hover:text-white">Revenue</a>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Dashboard</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="text-gray-400 text-sm">Videos processed</div>
+                <div id="stat-videos" class="text-3xl font-bold">-</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="text-gray-400 text-sm">Total users</div>
+                <div id="stat-users" class="text-3xl font-bold">-</div>
+            </div>
+            <div class="bg-green-800 rounded-lg p-6">
+                <div class="text-green-300 text-sm">Active users</div>
+                <div id="stat-active" class="text-3xl font-bold">-</div>
+            </div>
+            <div class="bg-red-900 rounded-lg p-6">
+                <div class="text-red-300 text-sm">Blocked users</div>
+                <div id="stat-blocked" class="text-3xl font-bold">-</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="text-gray-400 text-sm">Avg processing</div>
+                <div id="stat-time" class="text-3xl font-bold">-</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="text-gray-400 text-sm">Errors</div>
+                <div id="stat-errors" class="text-3xl font-bold">-</div>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6">
+            <h2 class="text-xl font-bold mb-4">Activity (24h)</h2>
+            <canvas id="activityChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            const res = await fetch('/api/stats');
+            const data = await res.json();
+            document.getElementById('stat-videos').textContent = data.total_videos;
+            document.getElementById('stat-users').textContent = data.total_users;
+            document.getElementById('stat-active').textContent = data.active_users;
+            document.getElementById('stat-blocked').textContent = data.blocked_users;
+            document.getElementById('stat-time').textContent = (data.avg_time_ms / 1000).toFixed(1) + 's';
+            document.getElementById('stat-errors').textContent = data.errors;
+        }
+
+        async function loadChart() {
+            const res = await fetch('/api/stats/hourly');
+            const data = await res.json();
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => new Date(d.hour).getHours() + ':00'),
+                    datasets: [{
+                        label: 'Videos',
+                        data: data.map(d => d.count),
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#374151' } },
+                        y: { grid: { color: '#374151' } }
+                    }
+                }
+            });
+        }
+
+        loadStats();
+        loadChart();
+    </script>
+</body>
+</html>

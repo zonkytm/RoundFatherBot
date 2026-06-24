@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mailings - Bot Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <nav class="bg-gray-800 px-6 py-3 flex gap-6">
+        <a href="/" class="text-gray-400 hover:text-white">Dashboard</a>
+        <a href="/mailings" class="text-white font-bold">Mailings</a>
+        <a href="/revenue" class="text-gray-400 hover:text-white">Revenue</a>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">Mailings</h1>
+            <button onclick="showCreate()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">+ Create</button>
+        </div>
+
+        <div id="mailings-list" class="space-y-3"></div>
+    </div>
+
+    <div id="create-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg">
+            <h3 class="text-xl font-bold mb-4">New Mailing</h3>
+
+            <input id="m-name" placeholder="Name" class="w-full bg-gray-700 rounded px-3 py-2 mb-3">
+            <textarea id="m-text" placeholder="Message (HTML supported)" class="w-full bg-gray-700 rounded px-3 py-2 mb-3 h-24"></textarea>
+
+            <select id="m-target" class="w-full bg-gray-700 rounded px-3 py-2 mb-4">
+                <option value="all">All users</option>
+                <option value="admins">Admins only</option>
+            </select>
+
+            <div class="mb-4">
+                <label class="block text-sm text-gray-400 mb-2">Type</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2">
+                        <input type="radio" name="m-type" value="once" checked onchange="updateTypeUI()"> Once
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="radio" name="m-type" value="delayed" onchange="updateTypeUI()"> Delayed
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="radio" name="m-type" value="recurring" onchange="updateTypeUI()"> Recurring
+                    </label>
+                </div>
+            </div>
+
+            <div id="delayed-field" class="hidden mb-4">
+                <label class="block text-sm text-gray-400 mb-2">Send at</label>
+                <input id="m-scheduled" type="datetime-local" class="w-full bg-gray-700 rounded px-3 py-2">
+            </div>
+
+            <div id="recurring-fields" class="hidden mb-4">
+                <label class="block text-sm text-gray-400 mb-2">Schedule mode</label>
+                <div class="flex gap-4 mb-3">
+                    <label class="flex items-center gap-2">
+                        <input type="radio" name="m-schedule-mode" value="cron" checked onchange="updateScheduleUI()"> Cron expression
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="radio" name="m-schedule-mode" value="preset" onchange="updateScheduleUI()"> Preset
+                    </label>
+                </div>
+                <div id="cron-field">
+                    <input id="m-cron" placeholder="0 10 * * *" class="w-full bg-gray-700 rounded px-3 py-2">
+                </div>
+                <div id="preset-field" class="hidden">
+                    <select id="m-preset" class="w-full bg-gray-700 rounded px-3 py-2"></select>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="createMailing()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex-1">Create</button>
+                <button onclick="closeCreate()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="logs-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg">
+            <h3 class="text-xl font-bold mb-4">Send History</h3>
+            <div id="logs-list" class="space-y-2 mb-4"></div>
+            <button onclick="closeLogs()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded w-full">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let presets = [];
+
+        const statusColors = {
+            pending: 'bg-yellow-600',
+            sending: 'bg-blue-600',
+            done: 'bg-green-600',
+            failed: 'bg-red-600'
+        };
+
+        function updateTypeUI() {
+            const type = document.querySelector('input[name="m-type"]:checked').value;
+            document.getElementById('delayed-field').classList.toggle('hidden', type !== 'delayed');
+            document.getElementById('recurring-fields').classList.toggle('hidden', type !== 'recurring');
+        }
+
+        function updateScheduleUI() {
+            const mode = document.querySelector('input[name="m-schedule-mode"]:checked').value;
+            document.getElementById('cron-field').classList.toggle('hidden', mode !== 'cron');
+            document.getElementById('preset-field').classList.toggle('hidden', mode !== 'preset');
+        }
+
+        async function loadPresets() {
+            const res = await fetch('/api/presets');
+            presets = await res.json();
+            const sel = document.getElementById('m-preset');
+            sel.innerHTML = presets.map(p => `<option value="${p.cron_expr}">${p.name}</option>`).join('');
+        }
+
+        async function loadMailings() {
+            const res = await fetch('/api/mailings');
+            const data = await res.json();
+            const list = document.getElementById('mailings-list');
+            if (!data.length) {
+                list.innerHTML = '<div class="text-gray-500 text-center py-8">No mailings yet</div>';
+                return;
+            }
+            list.innerHTML = data.map(m => `
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold">${m.name}</span>
+                                <span class="${statusColors[m.status] || 'bg-gray-600'} px-2 py-0.5 rounded text-xs">${m.status}</span>
+                                ${m.cron_expression ? '<span class="bg-purple-600 px-2 py-0.5 rounded text-xs">recurring</span>' : ''}
+                                ${m.scheduled_at && m.status === 'pending' ? `<span class="bg-indigo-600 px-2 py-0.5 rounded text-xs">scheduled: ${new Date(m.scheduled_at).toLocaleString()}</span>` : ''}
+                            </div>
+                            <div class="text-sm text-gray-400 truncate max-w-xl">${m.text}</div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                Target: ${m.target}
+                                ${m.sent_count > 0 || m.failed_count > 0 ? ` | Received: ${m.sent_count} | Blocked: ${m.failed_count}` : ''}
+                                ${m.cron_expression ? ` | Cron: ${m.cron_expression}` : ''}
+                                ${m.sent_at ? ` | Last: ${new Date(m.sent_at).toLocaleString()}` : ''}
+                            </div>
+                        </div>
+                        <div class="flex gap-2 ml-4 flex-shrink-0">
+                            <button onclick="showLogs(${m.id})" class="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-sm">History</button>
+                            ${m.cron_expression ? `
+                                <button onclick="toggleActive(${m.id}, ${!m.is_active})" class="px-3 py-1 rounded text-sm ${m.is_active ? 'bg-green-600' : 'bg-gray-600'}">
+                                    ${m.is_active ? 'On' : 'Off'}
+                                </button>
+                            ` : ''}
+                            ${m.status !== 'sending' ? `
+                                <button onclick="resend(${m.id})" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">Resend</button>
+                                <button onclick="deleteMailing(${m.id})" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm">Delete</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showCreate() {
+            document.getElementById('create-modal').classList.remove('hidden');
+            loadPresets();
+        }
+
+        function closeCreate() {
+            document.getElementById('create-modal').classList.add('hidden');
+        }
+
+        async function createMailing() {
+            const type = document.querySelector('input[name="m-type"]:checked').value;
+            const body = {
+                name: document.getElementById('m-name').value,
+                text: document.getElementById('m-text').value,
+                target: document.getElementById('m-target').value,
+            };
+
+            if (type === 'delayed') {
+                body.scheduled_at = document.getElementById('m-scheduled').value;
+            } else if (type === 'recurring') {
+                const mode = document.querySelector('input[name="m-schedule-mode"]:checked').value;
+                if (mode === 'cron') {
+                    body.cron_expression = document.getElementById('m-cron').value;
+                } else {
+                    body.cron_expression = document.getElementById('m-preset').value;
+                }
+            }
+
+            await fetch('/api/mailings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            closeCreate();
+            loadMailings();
+        }
+
+        async function toggleActive(id, active) {
+            await fetch(`/api/mailings/${id}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({is_active: active})
+            });
+            loadMailings();
+        }
+
+        async function resend(id) {
+            await fetch(`/api/mailings/${id}/send`, {method: 'POST'});
+            loadMailings();
+        }
+
+        async function deleteMailing(id) {
+            if (!confirm('Delete this mailing?')) return;
+            await fetch(`/api/mailings/${id}`, {method: 'DELETE'});
+            loadMailings();
+        }
+
+        async function showLogs(id) {
+            const res = await fetch(`/api/mailings/${id}/logs`);
+            const logs = await res.json();
+            const list = document.getElementById('logs-list');
+            if (!logs.length) {
+                list.innerHTML = '<div class="text-gray-500 text-center py-4">No history</div>';
+            } else {
+                list.innerHTML = logs.map(l => `
+                    <div class="bg-gray-700 rounded p-3">
+                        <div class="text-sm">${new Date(l.sent_at).toLocaleString()}</div>
+                        <div class="text-xs text-gray-400">Sent: ${l.sent_count} | Failed: ${l.failed_count}</div>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('logs-modal').classList.remove('hidden');
+        }
+
+        function closeLogs() {
+            document.getElementById('logs-modal').classList.add('hidden');
+        }
+
+        loadMailings();
+        setInterval(loadMailings, 5000);
+    </script>
+</body>
+</html>

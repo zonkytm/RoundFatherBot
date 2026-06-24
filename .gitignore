@@ -1,0 +1,32 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+.env
+*.log
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+*.db
+*.sqlite3
+
+/tmp/
+/tmp/bot_media/
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+docker-compose.override.yml
+
+# Agent files
+AGENTS.md
+Roadmap.md
+вывод докер контейнеров.md
