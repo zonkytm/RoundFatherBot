@@ -17,6 +17,8 @@
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-8">Bot Settings</h1>
 
+        <div id="error-box" class="hidden bg-red-900 text-red-200 rounded p-4 mb-6"></div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="bg-gray-800 rounded-lg p-6">
                 <h2 class="text-xl font-bold mb-4 text-blue-400">Limits</h2>
@@ -29,7 +31,7 @@
             </div>
         </div>
 
-        <div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg hidden transition-opacity">
+        <div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg hidden">
             Saved!
         </div>
     </div>
@@ -47,16 +49,23 @@
         const LABELS = {
             daily_limit: 'Daily Video Limit (free users)',
             rate_limit_per_minute: 'Rate Limit (per minute)',
-            premium_price_1mo_stars: '1 Month — Stars',
-            premium_price_1mo_rub: '1 Month — RUB',
-            premium_price_3mo_stars: '3 Months — Stars',
-            premium_price_3mo_rub: '3 Months — RUB',
-            premium_price_6mo_stars: '6 Months — Stars',
-            premium_price_6mo_rub: '6 Months — RUB',
+            premium_price_1mo_stars: '1 Month - Stars',
+            premium_price_1mo_rub: '1 Month - RUB',
+            premium_price_3mo_stars: '3 Months - Stars',
+            premium_price_3mo_rub: '3 Months - RUB',
+            premium_price_6mo_stars: '6 Months - Stars',
+            premium_price_6mo_rub: '6 Months - RUB',
         };
 
-        function showToast() {
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            box.textContent = msg;
+            box.classList.remove('hidden');
+        }
+
+        function showToast(msg) {
             const t = document.getElementById('toast');
+            t.textContent = msg || 'Saved!';
             t.classList.remove('hidden');
             setTimeout(() => t.classList.add('hidden'), 2000);
         }
@@ -70,48 +79,74 @@
 
                 const row = document.createElement('div');
                 row.className = 'flex items-center gap-4';
-
                 row.innerHTML = `
                     <label class="text-sm text-gray-300 w-64 shrink-0">${LABELS[key] || key}</label>
-                    <input type="text" value="${s.value}"
+                    <input type="number" value="${s.value}" min="0"
                         class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
                         data-key="${key}">
-                    <button onclick="saveSetting(this)"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shrink-0">
+                    <button class="save-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shrink-0">
                         Save
                     </button>
                 `;
                 container.appendChild(row);
             }
+
+            container.querySelectorAll('.save-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const row = this.closest('.flex');
+                    const input = row.querySelector('input');
+                    const key = input.dataset.key;
+                    const value = input.value.trim();
+
+                    if (!value || !/^\d+$/.test(value)) {
+                        alert('Value must be a positive number');
+                        return;
+                    }
+
+                    this.disabled = true;
+                    this.textContent = '...';
+
+                    try {
+                        const res = await fetch('/api/settings/' + encodeURIComponent(key), {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ value: value })
+                        });
+                        const data = await res.json();
+
+                        if (res.ok && data.ok) {
+                            showToast(key + ' = ' + value);
+                        } else {
+                            alert('Error: ' + (data.detail || JSON.stringify(data)));
+                        }
+                    } catch (err) {
+                        alert('Network error: ' + err.message);
+                    } finally {
+                        this.disabled = false;
+                        this.textContent = 'Save';
+                    }
+                });
+            });
         }
 
         async function loadSettings() {
-            const res = await fetch('/api/settings');
-            const settings = await res.json();
-            renderGroup('settings-limits', CATEGORIES.limits, settings);
-            renderGroup('settings-prices', CATEGORIES.prices, settings);
-        }
-
-        async function saveSetting(btn) {
-            const input = btn.parentElement.querySelector('input');
-            const key = input.dataset.key;
-            const value = input.value.trim();
-
-            if (!/^\d+$/.test(value)) {
-                alert('Value must be a number');
-                return;
-            }
-
-            const res = await fetch(`/api/settings/${key}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ value })
-            });
-
-            if (res.ok) {
-                showToast();
-            } else {
-                alert('Failed to save');
+            try {
+                const res = await fetch('/api/settings', { credentials: 'same-origin' });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showError('Auth error: ' + (err.detail || res.status) + '. Re-login at /login');
+                    return;
+                }
+                const settings = await res.json();
+                if (!Array.isArray(settings)) {
+                    showError('Unexpected response: ' + JSON.stringify(settings));
+                    return;
+                }
+                renderGroup('settings-limits', CATEGORIES.limits, settings);
+                renderGroup('settings-prices', CATEGORIES.prices, settings);
+            } catch (err) {
+                showError('Failed to load settings: ' + err.message);
             }
         }
 
