@@ -26,8 +26,8 @@
             </div>
 
             <div class="bg-gray-800 rounded-lg p-6">
-                <h2 class="text-xl font-bold mb-4 text-yellow-400">Premium Prices</h2>
-                <div id="settings-prices" class="space-y-4"></div>
+                <h2 class="text-xl font-bold mb-4 text-yellow-400">Premium Packages</h2>
+                <div id="settings-packages" class="space-y-4"></div>
             </div>
         </div>
 
@@ -37,31 +37,11 @@
     </div>
 
     <script>
-        const CATEGORIES = {
-            limits: ['daily_limit', 'rate_limit_per_minute'],
-            prices: [
-                'premium_price_1mo_stars', 'premium_price_1mo_rub',
-                'premium_price_3mo_stars', 'premium_price_3mo_rub',
-                'premium_price_6mo_stars', 'premium_price_6mo_rub',
-            ]
-        };
-
-        const LABELS = {
+        const LIMIT_KEYS = ['daily_limit', 'rate_limit_per_minute'];
+        const LIMIT_LABELS = {
             daily_limit: 'Daily Video Limit (free users)',
             rate_limit_per_minute: 'Rate Limit (per minute)',
-            premium_price_1mo_stars: '1 Month - Stars',
-            premium_price_1mo_rub: '1 Month - RUB',
-            premium_price_3mo_stars: '3 Months - Stars',
-            premium_price_3mo_rub: '3 Months - RUB',
-            premium_price_6mo_stars: '6 Months - Stars',
-            premium_price_6mo_rub: '6 Months - RUB',
         };
-
-        function showError(msg) {
-            const box = document.getElementById('error-box');
-            box.textContent = msg;
-            box.classList.remove('hidden');
-        }
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -70,62 +50,104 @@
             setTimeout(() => t.classList.add('hidden'), 2000);
         }
 
-        function renderGroup(containerId, keys, settings) {
-            const container = document.getElementById(containerId);
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            box.textContent = msg;
+            box.classList.remove('hidden');
+        }
+
+        function renderLimits(settings) {
+            const container = document.getElementById('settings-limits');
             container.innerHTML = '';
-            for (const key of keys) {
+            for (const key of LIMIT_KEYS) {
                 const s = settings.find(x => x.key === key);
                 if (!s) continue;
 
                 const row = document.createElement('div');
                 row.className = 'flex items-center gap-4';
                 row.innerHTML = `
-                    <label class="text-sm text-gray-300 w-64 shrink-0">${LABELS[key] || key}</label>
+                    <label class="text-sm text-gray-300 w-56 shrink-0">${LIMIT_LABELS[key]}</label>
                     <input type="number" value="${s.value}" min="0"
                         class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
                         data-key="${key}">
-                    <button class="save-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shrink-0">
-                        Save
-                    </button>
+                    <button class="save-limit bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm shrink-0">Save</button>
                 `;
                 container.appendChild(row);
             }
 
-            container.querySelectorAll('.save-btn').forEach(btn => {
+            container.querySelectorAll('.save-limit').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const row = this.closest('.flex');
                     const input = row.querySelector('input');
                     const key = input.dataset.key;
                     const value = input.value.trim();
 
-                    if (!value || !/^\d+$/.test(value)) {
-                        alert('Value must be a positive number');
-                        return;
-                    }
-
-                    this.disabled = true;
-                    this.textContent = '...';
-
+                    if (!value || !/^\d+$/.test(value)) { alert('Must be a number'); return; }
+                    this.disabled = true; this.textContent = '...';
                     try {
                         const res = await fetch('/api/settings/' + encodeURIComponent(key), {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             credentials: 'same-origin',
-                            body: JSON.stringify({ value: value })
+                            body: JSON.stringify({ value })
                         });
                         const data = await res.json();
+                        if (res.ok && data.ok) showToast(key + ' = ' + value);
+                        else alert('Error: ' + (data.detail || JSON.stringify(data)));
+                    } catch (e) { alert('Network error: ' + e.message); }
+                    finally { this.disabled = false; this.textContent = 'Save'; }
+                });
+            });
+        }
 
-                        if (res.ok && data.ok) {
-                            showToast(key + ' = ' + value);
-                        } else {
-                            alert('Error: ' + (data.detail || JSON.stringify(data)));
-                        }
-                    } catch (err) {
-                        alert('Network error: ' + err.message);
-                    } finally {
-                        this.disabled = false;
-                        this.textContent = 'Save';
+        function renderPackages(packages) {
+            const container = document.getElementById('settings-packages');
+            container.innerHTML = '';
+            for (const pkg of packages) {
+                const row = document.createElement('div');
+                row.className = 'bg-gray-700 rounded p-4 space-y-3';
+                row.innerHTML = `
+                    <div class="font-bold text-white">${pkg.name}</div>
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm text-gray-300 w-28 shrink-0">Stars</label>
+                        <input type="number" value="${pkg.price_stars}" min="0"
+                            class="flex-1 bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm focus:border-yellow-500 focus:outline-none"
+                            data-pkg="${pkg.id}" data-field="price_stars">
+                        <label class="text-sm text-gray-300 w-28 shrink-0">RUB</label>
+                        <input type="number" value="${pkg.price_rub}" min="0"
+                            class="flex-1 bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm focus:border-yellow-500 focus:outline-none"
+                            data-pkg="${pkg.id}" data-field="price_rub">
+                        <button class="save-pkg bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm shrink-0">Save</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            }
+
+            container.querySelectorAll('.save-pkg').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const card = this.closest('.bg-gray-700');
+                    const pkgId = card.querySelector('input').dataset.pkg;
+                    const starsInput = card.querySelector('[data-field="price_stars"]');
+                    const rubInput = card.querySelector('[data-field="price_rub"]');
+                    const price_stars = parseInt(starsInput.value);
+                    const price_rub = parseInt(rubInput.value);
+
+                    if (isNaN(price_stars) || isNaN(price_rub) || price_stars < 0 || price_rub < 0) {
+                        alert('Prices must be positive numbers'); return;
                     }
+                    this.disabled = true; this.textContent = '...';
+                    try {
+                        const res = await fetch('/api/settings/package/' + pkgId, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ price_stars, price_rub })
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.ok) showToast('Package updated');
+                        else alert('Error: ' + (data.detail || JSON.stringify(data)));
+                    } catch (e) { alert('Network error: ' + e.message); }
+                    finally { this.disabled = false; this.textContent = 'Save'; }
                 });
             });
         }
@@ -138,15 +160,11 @@
                     showError('Auth error: ' + (err.detail || res.status) + '. Re-login at /login');
                     return;
                 }
-                const settings = await res.json();
-                if (!Array.isArray(settings)) {
-                    showError('Unexpected response: ' + JSON.stringify(settings));
-                    return;
-                }
-                renderGroup('settings-limits', CATEGORIES.limits, settings);
-                renderGroup('settings-prices', CATEGORIES.prices, settings);
-            } catch (err) {
-                showError('Failed to load settings: ' + err.message);
+                const data = await res.json();
+                renderLimits(data.settings || []);
+                renderPackages(data.packages || []);
+            } catch (e) {
+                showError('Failed to load: ' + e.message);
             }
         }
 

@@ -14,7 +14,6 @@ from sqlalchemy import select
 
 from bot.models.base import async_session
 from bot.models.premium import Payment, PremiumPackage
-from bot.models.setting import BotSetting
 from bot.models.user import User
 
 premium_router = Router()
@@ -30,9 +29,6 @@ async def cmd_premium(message: Message) -> None:
         )
         packages = result.scalars().all()
 
-        settings_result = await session.execute(select(BotSetting))
-        settings_map = {s.key: s.value for s in settings_result.scalars().all()}
-
     if not packages:
         await message.answer("Premium packages are not available yet.")
         return
@@ -40,25 +36,16 @@ async def cmd_premium(message: Message) -> None:
     builder = InlineKeyboardBuilder()
 
     for pkg in packages:
-        stars_key = f"premium_price_{pkg.duration_days // 30}mo_stars"
-        rub_key = f"premium_price_{pkg.duration_days // 30}mo_rub"
-        stars_price = int(settings_map.get(stars_key, pkg.price_stars))
-        rub_price = int(settings_map.get(rub_key, pkg.price_rub))
-
         builder.row(
             InlineKeyboardButton(
-                text=f"\u2b50 {pkg.name} \u2014 {stars_price}\u2b50",
+                text=f"\u2b50 {pkg.name} \u2014 {pkg.price_stars}\u2b50",
                 callback_data=f"premium_stars:{pkg.id}",
             )
         )
     for pkg in packages:
-        stars_key = f"premium_price_{pkg.duration_days // 30}mo_stars"
-        rub_key = f"premium_price_{pkg.duration_days // 30}mo_rub"
-        rub_price = int(settings_map.get(rub_key, pkg.price_rub))
-
         builder.row(
             InlineKeyboardButton(
-                text=f"\U0001f4b3 {pkg.name} \u2014 {rub_price}\u20bd",
+                text=f"\U0001f4b3 {pkg.name} \u2014 {pkg.price_rub}\u20bd",
                 callback_data="premium_yookassa",
             )
         )
@@ -85,12 +72,6 @@ async def callback_premium_stars(callback: CallbackQuery):
             await callback.answer("Package not found.", show_alert=True)
             return
 
-        settings_result = await session.execute(select(BotSetting))
-        settings_map = {s.key: s.value for s in settings_result.scalars().all()}
-
-        stars_key = f"premium_price_{pkg.duration_days // 30}mo_stars"
-        stars_price = int(settings_map.get(stars_key, pkg.price_stars))
-
         await callback.bot.send_invoice(
             chat_id=callback.from_user.id,
             title=f"Premium \u2014 {pkg.name}",
@@ -98,7 +79,7 @@ async def callback_premium_stars(callback: CallbackQuery):
             payload=f"premium:{package_id}:{callback.from_user.id}",
             provider_token="",
             currency="XTR",
-            prices=[LabeledPrice(label=f"Premium {pkg.name}", amount=stars_price)],
+            prices=[LabeledPrice(label=f"Premium {pkg.name}", amount=pkg.price_stars)],
         )
     await callback.answer()
 
