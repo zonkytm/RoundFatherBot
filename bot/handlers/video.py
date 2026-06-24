@@ -47,7 +47,7 @@ async def handle_video(message: Message) -> None:
                     select(BotSetting).where(BotSetting.key == "daily_limit")
                 )
             ).scalar_one_or_none()
-            daily_limit = int(limit_setting.value) if limit_setting else user.daily_limit
+            daily_limit = int(limit_setting.value) if limit_setting else 10
 
             day_ago = datetime.utcnow() - timedelta(hours=24)
             today_count = (

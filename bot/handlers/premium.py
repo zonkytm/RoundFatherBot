@@ -117,7 +117,6 @@ async def on_successful_payment(message: Message) -> None:
 
         user.is_premium = True
         user.premium_expires_at = expires
-        user.daily_limit = 0
 
         payment_record = Payment(
             user_id=user.id,
