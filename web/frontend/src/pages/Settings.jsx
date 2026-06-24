@@ -84,7 +84,7 @@ export default function Settings() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-gray-800 rounded-lg p-6">
+        <div className="bg-gray-800 rounded-lg p-6 min-w-0">
           <h2 className="text-xl font-bold mb-4 text-blue-400">Limits</h2>
           <div className="space-y-4">
             {LIMIT_KEYS.map((key) => {
@@ -102,7 +102,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-6">
+        <div className="bg-gray-800 rounded-lg p-6 min-w-0">
           <h2 className="text-xl font-bold mb-4 text-yellow-400">Premium Packages</h2>
           <div className="space-y-4">
             {packages.map((pkg) => (
@@ -132,14 +132,14 @@ function LimitRow({ label, value, onSave }) {
   };
 
   return (
-    <div className="flex items-center gap-4">
-      <label className="text-sm text-gray-300 w-56 shrink-0">{label}</label>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+      <label className="text-sm text-gray-300 sm:w-48 shrink-0">{label}</label>
       <input
         type="number"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         min="0"
-        className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+        className="min-w-0 flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
       />
       <button
         onClick={handleSave}
@@ -166,31 +166,37 @@ function PackageRow({ pkg, onSave }) {
   return (
     <div className="bg-gray-700 rounded p-4 space-y-3">
       <div className="font-bold text-white">{pkg.name}</div>
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-gray-300 w-28 shrink-0">Stars</label>
-        <input
-          type="number"
-          value={stars}
-          onChange={(e) => setStars(e.target.value)}
-          min="0"
-          data-pkg={pkg.id}
-          data-field="price_stars"
-          className="flex-1 bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm focus:border-yellow-500 focus:outline-none"
-        />
-        <label className="text-sm text-gray-300 w-28 shrink-0">RUB</label>
-        <input
-          type="number"
-          value={rub}
-          onChange={(e) => setRub(e.target.value)}
-          min="0"
-          data-pkg={pkg.id}
-          data-field="price_rub"
-          className="flex-1 bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm focus:border-yellow-500 focus:outline-none"
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Stars</label>
+          <input
+            type="number"
+            value={stars}
+            onChange={(e) => setStars(e.target.value)}
+            min="0"
+            data-pkg={pkg.id}
+            data-field="price_stars"
+            className="w-full min-w-0 bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm focus:border-yellow-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">RUB</label>
+          <input
+            type="number"
+            value={rub}
+            onChange={(e) => setRub(e.target.value)}
+            min="0"
+            data-pkg={pkg.id}
+            data-field="price_rub"
+            className="w-full min-w-0 bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm focus:border-yellow-500 focus:outline-none"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm shrink-0 disabled:opacity-50"
+          className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
         >
           {saving ? '...' : 'Save'}
         </button>
