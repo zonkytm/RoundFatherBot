@@ -14,7 +14,7 @@ async def get_stats() -> dict:
 
         total_users = (await session.execute(select(func.count(User.id)))).scalar() or 0
         active_users = (
-            await session.execute(select(func.count(User.id)).where(not User.is_blocked))
+            await session.execute(select(func.count(User.id)).where(User.is_blocked == False))
         ).scalar() or 0
         blocked_users = total_users - active_users
         users_24h = (
