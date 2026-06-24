@@ -91,6 +91,7 @@ pytest tests/ -v
 | `/stats` | (Admin) Bot statistics |
 | `/blocked` | (Admin) List blocked users |
 | `/unblock <id>` | (Admin) Unblock a user |
+| `/refund <user_id> <charge_id>` | (Admin) Refund a Stars payment |
 
 ## Dashboard
 
@@ -112,6 +113,42 @@ Access at `http://localhost:8000` (login with `DASHBOARD_TOKEN`).
 | `WEBAPP_URL` | Dashboard public URL | `http://localhost:8000` |
 | `DASHBOARD_TOKEN` | Admin dashboard access token | -- |
 | `RATE_LIMIT_PER_MINUTE` | Max videos per user per minute | `5` |
+| `PAYMENTS_TEST_MODE` | Use Telegram test server for Stars | `false` |
+| `TEST_BOT_TOKEN` | Bot token from test server @BotFather | -- |
+
+## Testing Payments
+
+Telegram Stars can be tested using Telegram's **test environment**:
+
+### 1. Switch to Test Server
+
+**Telegram Desktop:**
+1. Open Settings → Advanced → Experimental Settings
+2. Enable "Test server"
+3. Restart Telegram
+
+**Alternative:** Use a separate Telegram account for testing.
+
+### 2. Create Test Bot
+
+1. Open `@BotFather` on the **test server**
+2. Create a new bot with `/newbot`
+3. Copy the test bot token
+
+### 3. Configure `.env`
+
+```env
+PAYMENTS_TEST_MODE=true
+TEST_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+```
+
+### 4. Restart Bot
+
+```bash
+docker compose up -d --build bot
+```
+
+**Note:** Test Stars are free and the payment flow is identical to production.
 | `RATE_LIMIT_PER_MINUTE` | Max videos per user per minute | `5` |
 
 ## Tech Stack

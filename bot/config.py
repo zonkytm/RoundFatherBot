@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     VIDEO_NOTE_SIZE: int = 360
     RATE_LIMIT_PER_MINUTE: int = 5
 
+    PAYMENTS_TEST_MODE: bool = False
+    TEST_BOT_TOKEN: str = ""
+
     TEMP_DIR: str = "/tmp/bot_media"
 
     LOG_FILE: str = "/var/log/bot/bot.log"

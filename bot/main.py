@@ -132,8 +132,12 @@ def setup_logging() -> None:
 async def main() -> None:
     setup_logging()
 
+    token = settings.TEST_BOT_TOKEN if settings.PAYMENTS_TEST_MODE else settings.BOT_TOKEN
+    if settings.PAYMENTS_TEST_MODE and not settings.TEST_BOT_TOKEN:
+        logging.warning("PAYMENTS_TEST_MODE is True but TEST_BOT_TOKEN is empty!")
+
     bot = Bot(
-        token=settings.BOT_TOKEN,
+        token=token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
