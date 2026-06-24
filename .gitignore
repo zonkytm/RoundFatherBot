@@ -30,3 +30,7 @@ docker-compose.override.yml
 AGENTS.md
 Roadmap.md
 вывод докер контейнеров.md
+
+# Frontend
+web/frontend/node_modules/
+web/static/dist/

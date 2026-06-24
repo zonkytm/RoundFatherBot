@@ -5,7 +5,7 @@ from pathlib import Path
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from prometheus_client import generate_latest
@@ -32,7 +32,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+# Mount React build if it exists
+DIST_DIR = BASE_DIR / "static" / "dist"
+if DIST_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="assets")
+
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app.include_router(auth_router, prefix="/api")
@@ -76,6 +83,10 @@ async def metrics():
 
 @app.get("/login")
 async def login_page(request: Request):
+    # Serve React app if available, otherwise Jinja2 template
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return templates.TemplateResponse(request, "login.html", {})
 
 
@@ -83,6 +94,10 @@ async def login_page(request: Request):
 async def dashboard(request: Request, user: dict = Depends(get_current_user)):
     if not user or user.get("role") != "admin":
         return RedirectResponse(url="/login")
+    # Serve React app if available
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return templates.TemplateResponse(request, "dashboard.html", {})
 
 
@@ -90,6 +105,9 @@ async def dashboard(request: Request, user: dict = Depends(get_current_user)):
 async def mailings_page(request: Request, user: dict = Depends(get_current_user)):
     if not user or user.get("role") != "admin":
         return RedirectResponse(url="/login")
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return templates.TemplateResponse(request, "mailings.html", {})
 
 
@@ -97,6 +115,9 @@ async def mailings_page(request: Request, user: dict = Depends(get_current_user)
 async def revenue_page(request: Request, user: dict = Depends(get_current_user)):
     if not user or user.get("role") != "admin":
         return RedirectResponse(url="/login")
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return templates.TemplateResponse(request, "revenue.html", {})
 
 
@@ -104,4 +125,21 @@ async def revenue_page(request: Request, user: dict = Depends(get_current_user))
 async def settings_page(request: Request, user: dict = Depends(get_current_user)):
     if not user or user.get("role") != "admin":
         return RedirectResponse(url="/login")
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return templates.TemplateResponse(request, "settings.html", {})
+
+
+# SPA fallback - serve index.html for any non-API, non-static route
+@app.get("/{full_path:path}")
+async def spa_fallback(request: Request, full_path: str):
+    # Skip API routes and static files
+    if full_path.startswith("api/") or full_path.startswith("static/"):
+        return JSONResponse(content={"detail": "Not found"}, status_code=404)
+    
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    
+    return RedirectResponse(url="/login")
